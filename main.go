@@ -15,7 +15,11 @@ func buildSearchUrl(text string) string {
 	return fmt.Sprintf("https://golangbyexample.com/?s=%s", text)
 }
 
-func handleClick(searchBar *gtk.SearchEntry) func() {
+func buildPackageUrl(text string) string {
+	return fmt.Sprintf("https://pkg.go.dev/search?q=%s", text)
+}
+
+func handleClick(searchBar *gtk.SearchEntry, urlFactory func(string) string) func() {
 	return func() {
 		text, err := searchBar.GetText()
 
@@ -23,7 +27,7 @@ func handleClick(searchBar *gtk.SearchEntry) func() {
 			log.Fatal(err)
 		}
 
-		var url = buildSearchUrl(text)
+		var url = urlFactory(text)
 		log.Println(url)
 		err = exec.Command("xdg-open", url).Start()
 
@@ -42,7 +46,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	box, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
+	searchBox, err := gtk.BoxNew(gtk.ORIENTATION_VERTICAL, 0)
 
 	if err != nil {
 		log.Fatal(err)
@@ -63,15 +67,15 @@ func main() {
 		log.Fatal("Unable to create search entry:", err)
 	}
 
-	inputButton, err := gtk.ButtonNew()
+	exampleButton, err := gtk.ButtonNew()
 	if err != nil {
 		log.Fatal("Unable to create button:", err)
 	}
 
-	var handleInput = handleClick(searchBar)
+	var handleInput = handleClick(searchBar, buildSearchUrl)
 
-	inputButton.SetLabel("GO search")
-	inputButton.Connect("clicked", handleInput)
+	exampleButton.SetLabel("Go search by example")
+	exampleButton.Connect("clicked", handleInput)
 
 	searchBar.Connect("key-press-event", func(s *gtk.SearchEntry, ev *gdk.Event) {
 		keyEvent := &gdk.EventKey{Event: ev}
@@ -81,13 +85,24 @@ func main() {
 		}
 	})
 
-	box.Add(searchBar)
-	box.Add(inputButton)
-	box.SetSpacing(20)
-	box.SetBorderWidth(20)
-	win.Add(box)
+	packageButton, err := gtk.ButtonNew()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	packageButton.SetLabel("Go search by package")
+	packageButton.Connect("clicked", handleClick(searchBar, buildPackageUrl))
+
+	searchBox.Add(searchBar)
+	searchBox.Add(exampleButton)
+	searchBox.Add(packageButton)
+	searchBox.SetSpacing(20)
+	searchBox.SetBorderWidth(20)
+
+	win.Add(searchBox)
 	// Set the default window size.
-	win.SetDefaultSize(800, 600)
+	win.SetDefaultSize(600, 600)
 	// Recursively show all widgets contained in this window.
 	win.ShowAll()
 
